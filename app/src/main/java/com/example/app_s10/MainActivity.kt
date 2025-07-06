@@ -3,6 +3,8 @@ package com.example.app_s10
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -11,9 +13,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.example.app_s10.model.Game
+import com.example.app_s10.model.GameAdapter
 import com.google.android.material.button.MaterialButton
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.ValueEventListener
 
 class MainActivity : AppCompatActivity() {
     
@@ -27,7 +37,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cardAchievements: CardView
     private lateinit var cardProfile: CardView
     private lateinit var cardSettings: CardView
-    
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var gameAdapter: GameAdapter
+    private var listaJuegos = mutableListOf<Game>()
+
     companion object {
         private const val TAG = "MainActivity"
     }
@@ -36,7 +49,12 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        
+
+        recyclerView = findViewById(R.id.rvJuegos)
+        gameAdapter = GameAdapter(listaJuegos)
+        recyclerView.adapter = gameAdapter
+        recyclerView.layoutManager = LinearLayoutManager(this)
+
         // Inicializar Firebase Auth
         auth = FirebaseAuth.getInstance()
         
@@ -59,8 +77,62 @@ class MainActivity : AppCompatActivity() {
         setupClickListeners()
         
         Log.d(TAG, "MainActivity iniciado para usuario: ${currentUser.email}")
+
+
+        // Para ESCRIBIR un dato simple:
+        val database = FirebaseDatabase.getInstance()
+        val ref = database.getReference("mensaje")
+        ref.setValue("¡Hola, Firebase! :)")
+
+        // Para LEER ese dato:
+        ref.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val value = snapshot.getValue(String::class.java)
+                Log.d("Firebase", "Valor leído: $value")
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.w("Firebase", "Error al leer: ", error.toException())
+            }
+        })
+
+        leerJuegosUI()
+
+        val btnAgregarJuego = findViewById<Button>(R.id.btnAgregarJuego)
+        btnAgregarJuego.setOnClickListener {
+            mostrarDialogoAgregarJuego()
+        }
+
+
     }
-    
+
+    private fun mostrarDialogoAgregarJuego() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_agregar_juego, null)
+        val etNombre = dialogView.findViewById<EditText>(R.id.etNombre)
+        val etGenero = dialogView.findViewById<EditText>(R.id.etGenero)
+        val etAnio = dialogView.findViewById<EditText>(R.id.etAnio)
+
+        AlertDialog.Builder(
+                this,
+            com.google.android.material.R.style.Theme_Material3_Dark_Dialog // usa este theme
+        )
+            .setTitle("Agregar Nuevo Juego")
+            .setView(dialogView)
+            .setPositiveButton("Agregar") { _, _ ->
+                val nombre = etNombre.text.toString()
+                val genero = etGenero.text.toString()
+                val anio = etAnio.text.toString().toIntOrNull() ?: 0
+                if (nombre.isNotBlank() && genero.isNotBlank() && anio > 0) {
+                    crearJuego(nombre, genero, anio)
+                } else {
+                    Toast.makeText(this, "Completa todos los campos correctamente", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+
     private fun setupUI() {
         // Inicializar views
         tvWelcome = findViewById(R.id.tv_welcome)
@@ -195,4 +267,67 @@ class MainActivity : AppCompatActivity() {
             redirectToLogin()
         }
     }
+
+    fun crearJuego(nombre: String, genero: String, anio: Int) {
+        val database = FirebaseDatabase.getInstance()
+        val juegosRef = database.getReference("juegos")
+        val id = juegosRef.push().key   // Genera un ID único
+        if (id != null) {
+            val juego = Game(id, nombre, genero, anio)
+            juegosRef.child(id).setValue(juego)
+                .addOnSuccessListener {
+                    Log.d("CRUD", "Juego creado exitosamente")
+                }
+                .addOnFailureListener {
+                    Log.e("CRUD", "Error al crear juego", it)
+                }
+        }
+    }
+
+    fun leerJuegosUI() {
+        val database = FirebaseDatabase.getInstance()
+        val juegosRef = database.getReference("juegos")
+        juegosRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val nuevosJuegos = mutableListOf<Game>()
+                for (juegoSnapshot in snapshot.children) {
+                    val juego = juegoSnapshot.getValue(Game::class.java)
+                    juego?.let { nuevosJuegos.add(it) }
+                }
+                listaJuegos.clear()
+                listaJuegos.addAll(nuevosJuegos)
+                gameAdapter.actualizarLista(listaJuegos)
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
+    }
+
+
+    fun actualizarJuego(juego: Game) {
+        val database = FirebaseDatabase.getInstance()
+        val juegosRef = database.getReference("juegos")
+        if (juego.id != null) {
+            juegosRef.child(juego.id!!).setValue(juego)
+                .addOnSuccessListener {
+                    Log.d("CRUD", "Juego actualizado correctamente")
+                }
+                .addOnFailureListener {
+                    Log.e("CRUD", "Error al actualizar juego", it)
+                }
+        }
+    }
+
+    fun eliminarJuego(id: String) {
+        val database = FirebaseDatabase.getInstance()
+        val juegosRef = database.getReference("juegos")
+        juegosRef.child(id).removeValue()
+            .addOnSuccessListener {
+                Log.d("CRUD", "Juego eliminado correctamente")
+            }
+            .addOnFailureListener {
+                Log.e("CRUD", "Error al eliminar juego", it)
+            }
+    }
+
+
 }

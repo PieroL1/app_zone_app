@@ -282,42 +282,42 @@
 
             </GridLayout>
 
-            <!-- Mensaje de bienvenida adicional -->
-            <androidx.cardview.widget.CardView
-                android:id="@+id/card_welcome_message"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                app:cardBackgroundColor="@color/gaming_surface_variant"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="4dp">
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-                <LinearLayout
+                <!-- Otros headers o cards arriba si quieres -->
+
+                <!-- Título -->
+                <TextView
+                    android:id="@+id/tv_juegos_title"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
+                    android:text="Lista de Juegos"
+                    android:textStyle="bold"
+                    android:textSize="18sp"
+                    android:gravity="center"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="🚀 ¡Firebase Authentication Configurado!"
-                        android:textColor="@color/gaming_neon_green"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
+                <!-- RecyclerView: ocupa casi todo el espacio disponible -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvJuegos"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginBottom="8dp" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Has iniciado sesión exitosamente. Tu aplicación gaming está lista para usar Firebase Authentication con el tema personalizado."
-                        android:textColor="@color/gaming_text_secondary"
-                        android:textSize="14sp"
-                        android:lineSpacingExtra="2dp" />
+                <!-- Botón al final -->
+                <Button
+                    android:id="@+id/btnAgregarJuego"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Agregar Juego" />
+            </LinearLayout>
 
-                </LinearLayout>
-
-            </androidx.cardview.widget.CardView>
 
         </LinearLayout>
 
